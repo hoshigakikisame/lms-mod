@@ -10,6 +10,9 @@ The idea behind this script is to make it easier for students to access their as
 - [x] Floating mod menu.
 - [x] Shortcut menu for all upcoming assignment including the unlisted ones.
 - [x] Shortcut menu for all user courses.
+- [x] Font Enhancher. Change the font of the LMS to "that" font.
+- [x] (Experimental) Authentication using Polinema's SSO. So you don't need to go to siakad > slc > lmsslc to access the LMS.
+- [x] (Experimental) Extend cookie expiration time.
 
 ## Installation
 1. Install Tampermonkey extension for your browser (Chrome, Firefox, Edge, etc). You can download it [here](https://www.tampermonkey.net/).

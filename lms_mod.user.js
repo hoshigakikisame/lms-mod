@@ -12,6 +12,11 @@
 await(async function () {
     'use strict';
 
+    // variables
+    var sessionKey;
+    var tasks;
+    var courses;
+
     // global style
     function globalStyle() {
         const style = document.createElement("style");
@@ -37,34 +42,44 @@ await(async function () {
         return banner;
     }
 
+    function isAuthenticated() {
+        return document.cookie && document.cookie.includes("SESSIONKEY") && document.cookie.includes("SESSIONSIAK");
+    }
+
+    async function authenticate() {
+        window.location = `https://slc.polinema.ac.id/spada/?gotourl=${window.location.origin}`;
+    }
+
     // data services
-    async function fetchSessionKey() {
-        let sessionKey = "";
-        await fetch("https://lmsslc.polinema.ac.id/my/", {
-            "headers": {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-                "Accept-Language": "en-US,en;q=0.5",
-                "Upgrade-Insecure-Requests": "1",
-                "Sec-Fetch-Dest": "document",
-                "Sec-Fetch-Mode": "navigate",
-                "Sec-Fetch-Site": "none",
-                "Sec-Fetch-User": "?1"
-            },
-            "method": "GET",
-            "mode": "cors"
-        }).then(response => response.text()).then(
-            (text) => {
-                const rawSession = text.match(/<input type="hidden" name="sesskey" value=".*">/g)[0];
-                sessionKey = rawSession.match(/[a-zA-Z0-9]{10}/g)[0];
-            }
-        ).catch((error) => {
-            console.error('Error:', error);
-        });
+    async function getSessionKey() {
+
+        // wait for the page to load
+        while (document.body === null) {
+            await new Promise(r => setTimeout(r, 500));
+        }
+
+        let rawSession = document.body.innerHTML.match(/sesskey=.*/g) ?? [];
+        if (rawSession.length === 0) {
+            return null;
+        }
+        rawSession = rawSession[0];
+        const sessionKey = rawSession.match(/[a-zA-Z0-9]{10}/g)[0];
         return sessionKey;
     }
 
-    const sessionKey = await fetchSessionKey();
+    async function extendLMSCookieExpiration(hours = 1, days = 0) {
+        let cookieNames = ["SESSIONKEY", "SESSIONSIAK"];
+        cookieNames.forEach(cookieName => {
+            const cookie = document.cookie.match(new RegExp(cookieName + "=([^;]+)"));
+            if (cookie) {
+                const expirationDate = new Date();
+                expirationDate.setHours(expirationDate.getHours() + hours);
+                expirationDate.setDate(expirationDate.getDate() + days);
+                document.cookie = `${cookieName}=${cookie[1]}; expires=${expirationDate.toUTCString()}; path=/; domain=polinema.ac.id`;
+                console.log("check");
+            }
+        });
+    }
 
     async function fetchTasks(sessionKey, maxAmount = 25) {
         const epochNow = Math.floor(Date.now() / 1000);
@@ -104,47 +119,42 @@ await(async function () {
         return tasks;
     }
 
-    const tasks = await fetchTasks(sessionKey);
-
-    async function fetchCourses() {
-        let courses = [];
-        await fetch(`https://lmsslc.polinema.ac.id/user/profile.php?showallcourses=1`, {
+    async function fetchCourses(sessionKey) {
+        const courses = [];
+        await fetch(`https://lmsslc.polinema.ac.id/lib/ajax/service.php?sesskey=${sessionKey}&info=core_course_get_enrolled_courses_by_timeline_classification`, {
             "credentials": "include",
             "headers": {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0",
-                "Accept": "text/html, */*; q=0.01",
+                "Accept": "application/json, text/javascript, */*; q=0.01",
                 "Accept-Language": "en-US,en;q=0.5",
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
                 "Sec-Fetch-Dest": "empty",
                 "Sec-Fetch-Mode": "cors",
                 "Sec-Fetch-Site": "same-origin"
             },
             "referrer": "https://lmsslc.polinema.ac.id/my/",
-            "method": "GET",
+            "body": "[{\"index\":0,\"methodname\":\"core_course_get_enrolled_courses_by_timeline_classification\",\"args\":{\"offset\":0,\"limit\":0,\"classification\":\"all\",\"sort\":\"fullname\",\"customfieldname\":\"\",\"customfieldvalue\":\"\"}}]",
+            "method": "POST",
             "mode": "cors"
-        }).then(response => response.text()).then(
-            (text) => {
-                const rawCourses = text.match(/<dd><ul.*<\/ul><\/dd>/g)[0].match(/<a.*?<\/a>/g);
-                const coursesData = rawCourses.map(course => {
-                    const courseId = course.match(/course=[0-9]+/g)[0].match(/[0-9]+/g)[0];
-                    const courseName = course.match(/>(.*?)</g)[0].match(/[^><]+/g)[0];
-                    return { courseId, courseName };
+        }).then(response => response.json()).then((json) => {
+            const coursesData = json[0].data.courses;
+            coursesData.forEach(course => {
+                courses.push({
+                    "name": course.fullname,
+                    "url": course.viewurl
                 });
-                coursesData.forEach(course => {
-                    courses.push(`<a href="https://lmsslc.polinema.ac.id/course/view.php?id=${course.courseId}">${course.courseName}</a>`);
-                });
-            }
-        ).catch((error) => {
+            });
+        }).catch((error) => {
             console.error('Error:', error);
         });
+
         return courses;
     }
-
-    const courses = await fetchCourses();
 
     // UI
 
     // main container
-
     function mainContainer() {
         const container = document.createElement("div");
         container.style.position = "fixed";
@@ -159,8 +169,16 @@ await(async function () {
         return container;
     }
 
-    // menu
+    // authenticate
+    function authenticateButton() {
+        const button = document.createElement("button");
+        button.className = "btn btn-primary btn-lg";
+        button.innerHTML = "Authenticate";
+        button.onclick = authenticate;
+        return button;
+    }
 
+    // menu
     function menuContainer() {
         const container = document.createElement("div");
         container.id = "menuContainer";
@@ -222,6 +240,12 @@ await(async function () {
 
         // courses option
         list.appendChild(coursesOption(container, list, courses));
+
+        // extend cookie expiration option
+        list.appendChild(extendCookieOption());
+
+        // font enhancement option
+        list.appendChild(fontEnhancementOption());
 
         // hover interaction on children
         for (let i = 0; i < list.children.length; i++) {
@@ -318,7 +342,9 @@ await(async function () {
         courses.forEach(course => {
             const listItem = document.createElement("li");
             listItem.style.marginBottom = counter === courses.length ? "0" : "10px";
-            listItem.innerHTML = course;
+            listItem.innerHTML = `
+                <a href="${course.url}" style="color: black;">${course.name}</a>
+            `
             list.appendChild(listItem);
             counter++;
         });
@@ -326,6 +352,82 @@ await(async function () {
         list.prepend(backNav(list, previous));
 
         return list;
+    }
+
+    // extend cookie expiration option
+    function extendCookieOption() {
+        const extendCookieOption = document.createElement("div");
+        extendCookieOption.style.width = "100%";
+        extendCookieOption.innerHTML = "Extend Cookie Expiration (10 hours)";
+        extendCookieOption.style.cursor = "pointer";
+        extendCookieOption.style.padding = "15px 32px";
+        extendCookieOption.onclick = () => {
+            extendLMSCookieExpiration(10, 0);
+            // adding green overlay for feedback with smooth transition
+
+            extendCookieOption.innerHTML = "Success";
+            extendCookieOption.style.backgroundColor = "lightgreen";
+            extendCookieOption.style.transition = "background-color 0.5s";
+            setTimeout(() => {
+                extendCookieOption.style.backgroundColor = "white";
+                extendCookieOption.innerHTML = "Extend Cookie Expiration (10 hours)";
+            }, 1000);
+        }
+        return extendCookieOption;
+    }
+
+    function enhanceFont() {
+        // heading and default font
+        const link = document.createElement("link");
+        link.href = "https://fonts.googleapis.com/css2?family=Poppins:wght@300&display=swap";
+        link.rel = "stylesheet";
+        document.head.appendChild(link);
+        const style = document.createElement("style");
+        style.id = "fontEnhancement";
+        style.innerHTML = `
+        h1,h2,h3,h4,h5,h6,span {
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        *,html,body,p,a,li,button,small,ol,div {
+            font-family: sans-serif;
+        }
+        `;
+        document.head.appendChild(style);
+    }
+
+    function toggleFontEnhancement() {
+        let isEnhachedFontActive = document.cookie.includes("isEnhachedFontActive=true");
+        if (isEnhachedFontActive) {
+            document.getElementById("fontEnhancement").remove();
+            document.cookie = "isEnhachedFontActive=false";
+        } else {
+            enhanceFont();
+            document.cookie = "isEnhachedFontActive=true";
+        }
+    }
+
+    function fontEnhancementOption() {
+        const fontEnhancementOption = document.createElement("div");
+        fontEnhancementOption.style.width = "100%";
+        fontEnhancementOption.innerHTML = "Font Enhancement";
+        fontEnhancementOption.innerHTML += document.cookie.includes("isEnhachedFontActive=true") ? " (Enabled)" : " (Disabled)";
+        fontEnhancementOption.style.cursor = "pointer";
+        fontEnhancementOption.style.padding = "15px 32px";
+        fontEnhancementOption.onclick = () => {
+            toggleFontEnhancement();
+            // adding green overlay for feedback with smooth transition
+            fontEnhancementOption.innerHTML = "Success";
+            fontEnhancementOption.style.backgroundColor = "lightgreen";
+            fontEnhancementOption.style.transition = "background-color 0.5s";
+            setTimeout(() => {
+                fontEnhancementOption.style.backgroundColor = "white";
+                fontEnhancementOption.innerHTML = "Font Enhancement";
+                fontEnhancementOption.innerHTML += document.cookie.includes("isEnhachedFontActive=true") ? " (Enabled)" : " (Disabled)";
+            }, 1000);
+
+        }
+        return fontEnhancementOption;
     }
 
     // utilities
@@ -345,15 +447,24 @@ await(async function () {
         return backNav;
     }
 
-    function init() {
+    async function init() {
+
+        // data fetching
+        sessionKey = await getSessionKey();
+        tasks = await fetchTasks(sessionKey);
+        courses = await fetchCourses(sessionKey);
+
+        if (document.cookie.includes("isEnhachedFontActive=true")) {
+            enhanceFont();
+        }
+
         const container = mainContainer();
         document.body.appendChild(container);
         const menu = menuContainer();
         container.appendChild(menu);
-        container.appendChild(menuButton(menu));
+        container.appendChild(isAuthenticated() ? menuButton(menu) : authenticateButton());
         document.head.appendChild(globalStyle());
     }
 
     init();
-
 })();
