@@ -132,7 +132,6 @@ await(async function () {
                 coursesData.forEach(course => {
                     courses.push(`<a href="https://lmsslc.polinema.ac.id/course/view.php?id=${course.courseId}">${course.courseName}</a>`);
                 });
-                console.table(coursesData);
             }
         ).catch((error) => {
             console.error('Error:', error);
@@ -217,7 +216,6 @@ await(async function () {
         list.style.textAlign = "left";
         list.style.textDecoration = "none";
         list.style.marginBottom = "1rem";
-        // list.style.padding = "15px 32px";
 
         // task option
         list.appendChild(taskOption(container, list, tasks));
