@@ -14,8 +14,8 @@ await(async function () {
 
     // variables
     var sessionKey;
-    var tasks;
-    var courses;
+    var tasks = [];
+    var courses = [];
 
     // global style
     function globalStyle() {
@@ -448,14 +448,16 @@ await(async function () {
     }
 
     async function init() {
+        
+        if (document.cookie.includes("isEnhachedFontActive=true")) {
+            enhanceFont();
+        }
 
         // data fetching
         sessionKey = await getSessionKey();
-        tasks = await fetchTasks(sessionKey);
-        courses = await fetchCourses(sessionKey);
-
-        if (document.cookie.includes("isEnhachedFontActive=true")) {
-            enhanceFont();
+        if (sessionKey) {
+            tasks = await fetchTasks(sessionKey);
+            courses = await fetchCourses(sessionKey);
         }
 
         const container = mainContainer();
