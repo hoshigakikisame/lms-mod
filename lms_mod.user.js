@@ -400,10 +400,10 @@ await(async function () {
         let isEnhachedFontActive = document.cookie.includes("isEnhachedFontActive=true");
         if (isEnhachedFontActive) {
             document.getElementById("fontEnhancement").remove();
-            document.cookie = "isEnhachedFontActive=false";
+            document.cookie = "isEnhachedFontActive=false; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         } else {
             enhanceFont();
-            document.cookie = "isEnhachedFontActive=true";
+            document.cookie = "isEnhachedFontActive=true; expires=Thu, 01 Jan 2030 00:00:00 UTC; path=/;";
         }
     }
 
