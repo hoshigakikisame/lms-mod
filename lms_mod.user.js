@@ -70,13 +70,12 @@ await(async function () {
     async function extendLMSCookieExpiration(hours = 1, days = 0) {
         let cookieNames = ["SESSIONKEY", "SESSIONSIAK"];
         cookieNames.forEach(cookieName => {
-            const cookie = document.cookie.match(new RegExp(cookieName + "=([^;]+)"));
+            const cookie = document.cookie.match(new RegExp(`${cookieName}=([^;]+)`));
             if (cookie) {
                 const expirationDate = new Date();
                 expirationDate.setHours(expirationDate.getHours() + hours);
                 expirationDate.setDate(expirationDate.getDate() + days);
                 document.cookie = `${cookieName}=${cookie[1]}; expires=${expirationDate.toUTCString()}; path=/; domain=polinema.ac.id`;
-                console.log("check");
             }
         });
     }
@@ -356,21 +355,22 @@ await(async function () {
 
     // extend cookie expiration option
     function extendCookieOption() {
+        const hours = 0;
+        const days = 7;
         const extendCookieOption = document.createElement("div");
         extendCookieOption.style.width = "100%";
-        extendCookieOption.innerHTML = "Extend Cookie Expiration (10 hours)";
+        extendCookieOption.innerHTML = `Extend Cookie Expiration (${days} days, ${hours} hours)`;
         extendCookieOption.style.cursor = "pointer";
         extendCookieOption.style.padding = "15px 32px";
         extendCookieOption.onclick = () => {
-            extendLMSCookieExpiration(10, 0);
-            // adding green overlay for feedback with smooth transition
+            extendLMSCookieExpiration(hours, days);
 
             extendCookieOption.innerHTML = "Success";
             extendCookieOption.style.backgroundColor = "lightgreen";
             extendCookieOption.style.transition = "background-color 0.5s";
             setTimeout(() => {
                 extendCookieOption.style.backgroundColor = "white";
-                extendCookieOption.innerHTML = "Extend Cookie Expiration (10 hours)";
+                extendCookieOption.innerHTML = `Extend Cookie Expiration (${days} days, ${hours} hours)`;
             }, 1000);
         }
         return extendCookieOption;
