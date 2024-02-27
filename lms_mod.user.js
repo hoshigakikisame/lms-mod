@@ -82,7 +82,8 @@ await(async function () {
 
     async function fetchTasks(sessionKey, maxAmount = 25) {
         const epochNow = Math.floor(Date.now() / 1000);
-        const epochYearLater = Math.floor(Date.now() / 1000) + 31536000;
+        const epochWeekBefore = epochNow - 604800;
+        const epochYearLater = epochNow + 31536000;
         const tasks = [];
         await fetch(`https://lmsslc.polinema.ac.id/lib/ajax/service.php?sesskey=${sessionKey}&info=core_calendar_get_action_events_by_timesort`, {
             "credentials": "include",
@@ -97,7 +98,7 @@ await(async function () {
                 "Sec-Fetch-Site": "same-origin"
             },
             "referrer": "https://lmsslc.polinema.ac.id/my/",
-            "body": `[{\"index\":0,\"methodname\":\"core_calendar_get_action_events_by_timesort\",\"args\":{\"limitnum\":${maxAmount},\"timesortfrom\":${epochNow},\"timesortto\":${epochYearLater},\"limittononsuspendedevents\":true}}]`,
+            "body": `[{\"index\":0,\"methodname\":\"core_calendar_get_action_events_by_timesort\",\"args\":{\"limitnum\":${maxAmount},\"timesortfrom\":${epochWeekBefore},\"timesortto\":${epochYearLater},\"limittononsuspendedevents\":true}}]`,
             "method": "POST",
             "mode": "cors"
         }).then(response => response.json()).then(
