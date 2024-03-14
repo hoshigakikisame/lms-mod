@@ -71,9 +71,14 @@ await(async function () {
         return sessionKey;
     }
 
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+
     async function extendLMSCookieExpiration(hours = 1, days = 0) {
         let sessionCookieNames = ["SESSIONKEY", "SESSIONSIAK"];
-        const sessionExpCookieName = "lms_mod.sessionExp";
 
         sessionCookieNames.forEach(cookieName => {
             const cookie = document.cookie.match(new RegExp(`${cookieName}=([^;]+)`));
@@ -82,6 +87,7 @@ await(async function () {
                 expirationDate.setHours(expirationDate.getHours() + hours);
                 expirationDate.setDate(expirationDate.getDate() + days);
                 document.cookie = `${cookieName}=${cookie[1]}; expires=${expirationDate.toUTCString()}; path=/; domain=polinema.ac.id`;
+                document.cookie = `${sessionExpCookieName}=${expirationDate.toUTCString()}; expires=${expirationDate.toUTCString()}; path=/; domain=polinema.ac.id`;
             }
         });
     }
@@ -364,7 +370,17 @@ await(async function () {
     function extendCookieOption() {
         const hours = 0;
         const days = 7;
-        const infoStr = `Extend Cookie Expiration by ${days} days`;
+
+        let expiredInfo = "";
+
+        if (getCookie(sessionExpCookieName)) {
+            const expiredDate = new Date(getCookie(sessionExpCookieName));
+            const remainingDays = Math.trunc((expiredDate - Date.now()) / 86400000);
+            const remainingHours = Math.trunc((expiredDate - Date.now()) / 3600000) % 24;
+            expiredInfo = ` [Expires in ${remainingDays} days, ${remainingHours} hours]`
+        }
+
+        const infoStr = `Extend Cookie Expiration by ${days} days ${expiredInfo}`
 
         const extendCookieOption = document.createElement("div");
         extendCookieOption.style.width = "100%";
