@@ -17,6 +17,10 @@ await(async function () {
     var tasks = [];
     var courses = [];
 
+    // cookies
+    const sessionExpCookieName = "lms_mod.sessionExp";
+    const fontEnhancementCookieName = "lms_mod.fontEnhancement";
+
     // global style
     function globalStyle() {
         const style = document.createElement("style");
@@ -68,8 +72,10 @@ await(async function () {
     }
 
     async function extendLMSCookieExpiration(hours = 1, days = 0) {
-        let cookieNames = ["SESSIONKEY", "SESSIONSIAK"];
-        cookieNames.forEach(cookieName => {
+        let sessionCookieNames = ["SESSIONKEY", "SESSIONSIAK"];
+        const sessionExpCookieName = "lms_mod.sessionExp";
+
+        sessionCookieNames.forEach(cookieName => {
             const cookie = document.cookie.match(new RegExp(`${cookieName}=([^;]+)`));
             if (cookie) {
                 const expirationDate = new Date();
@@ -358,9 +364,11 @@ await(async function () {
     function extendCookieOption() {
         const hours = 0;
         const days = 7;
+        const infoStr = `Extend Cookie Expiration by ${days} days`;
+
         const extendCookieOption = document.createElement("div");
         extendCookieOption.style.width = "100%";
-        extendCookieOption.innerHTML = `Extend Cookie Expiration (${days} days, ${hours} hours)`;
+        extendCookieOption.innerHTML = infoStr;
         extendCookieOption.style.cursor = "pointer";
         extendCookieOption.style.padding = "15px 32px";
         extendCookieOption.onclick = () => {
@@ -371,7 +379,7 @@ await(async function () {
             extendCookieOption.style.transition = "background-color 0.5s";
             setTimeout(() => {
                 extendCookieOption.style.backgroundColor = "white";
-                extendCookieOption.innerHTML = `Extend Cookie Expiration (${days} days, ${hours} hours)`;
+                extendCookieOption.innerHTML = infoStr;
             }, 1000);
         }
         return extendCookieOption;
@@ -398,13 +406,13 @@ await(async function () {
     }
 
     function toggleFontEnhancement() {
-        let isEnhachedFontActive = document.cookie.includes("isEnhachedFontActive=true");
-        if (isEnhachedFontActive) {
+        let fontEnhancementActive = document.cookie.includes(`${fontEnhancementCookieName}=true`);
+        if (fontEnhancementActive) {
             document.getElementById("fontEnhancement").remove();
-            document.cookie = "isEnhachedFontActive=false; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            document.cookie = `${fontEnhancementCookieName}=false; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;1`;
         } else {
             enhanceFont();
-            document.cookie = "isEnhachedFontActive=true; expires=Thu, 01 Jan 2030 00:00:00 UTC; path=/;";
+            document.cookie = `${fontEnhancementCookieName}=true; expires=Thu, 01 Jan 2030 00:00:00 UTC; path=/;`;
         }
     }
 
@@ -412,7 +420,7 @@ await(async function () {
         const fontEnhancementOption = document.createElement("div");
         fontEnhancementOption.style.width = "100%";
         fontEnhancementOption.innerHTML = "Font Enhancement";
-        fontEnhancementOption.innerHTML += document.cookie.includes("isEnhachedFontActive=true") ? " (Enabled)" : " (Disabled)";
+        fontEnhancementOption.innerHTML += document.cookie.includes(`${fontEnhancementCookieName}=true`) ? " (Enabled)" : " (Disabled)";
         fontEnhancementOption.style.cursor = "pointer";
         fontEnhancementOption.style.padding = "15px 32px";
         fontEnhancementOption.onclick = () => {
@@ -424,7 +432,7 @@ await(async function () {
             setTimeout(() => {
                 fontEnhancementOption.style.backgroundColor = "white";
                 fontEnhancementOption.innerHTML = "Font Enhancement";
-                fontEnhancementOption.innerHTML += document.cookie.includes("isEnhachedFontActive=true") ? " (Enabled)" : " (Disabled)";
+                fontEnhancementOption.innerHTML += document.cookie.includes(`${fontEnhancementCookieName}=true`) ? " (Enabled)" : " (Disabled)";
             }, 1000);
 
         }
@@ -450,7 +458,7 @@ await(async function () {
 
     async function init() {
         
-        if (document.cookie.includes("isEnhachedFontActive=true")) {
+        if (document.cookie.includes(`${fontEnhancementCookieName}=true`)) {
             enhanceFont();
         }
 
